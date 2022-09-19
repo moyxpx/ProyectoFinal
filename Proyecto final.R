@@ -24,7 +24,7 @@ values <-   c(55, 70,
               42, 2)
 weights_bids <- matrix(values,ncol = 2, byrow = TRUE) 
 colnames(weights_bids)<-c('peso','pago')
-
+weights_bids
 plot(weights_bids)
 
 chromosome <- function(weights){
@@ -44,8 +44,9 @@ chromosome <- function(weights){
   return(out)
 }
 
-population <- t(sapply(1:500,function(x,w){chromosome(w)},w=weights_bids[,2] ))
-population <- cbind(population,population %*% weights_bids[,1])
+population <- t(sapply(1:500,function(x,w){chromosome(w)},w=weights_bids[,1] ))
+population <- cbind(population,population %*% weights_bids[,2])
+
 
 # Crossover half weight 
 crossover<- function(child){
@@ -60,7 +61,7 @@ if(!is.na(rcut)){
   (lcut <- rcut-1)
   proto_child <- c(p2[1:lcut],p1[rcut:20])
 }
-remove_weight <- which(cumsum(proto_child*weights_bids[,2])>500)
+remove_weight <- which(cumsum(proto_child*weights_bids[,1])>500)
 proto_child[remove_weight] <- 0
 child <- proto_child
 return(child)
@@ -93,11 +94,13 @@ for (i in 1:500) {
   hijo<- crossover(padres)
   if(runif(1)<0.01){
     hijo<- mutacion(hijo)
+    
   }
   nuevapoblacion<- rbind(nuevapoblacion,hijo)
 }
 population<- nuevapoblacion[-1,-1]
-population <- cbind(population,population %*% weights_bids[,1])
+population <- cbind(population,population %*% weights_bids[,2])
+
 
 population
 data.frame(population)
@@ -109,8 +112,20 @@ data.frame(population)
 
 ## Simulated ANNEALING
 
-
-
+generated_paquetes<- function(paquetes=5){
+  pos_x <- sample(length(weights_bids[,2]), size = paquetes, replace=TRUE) 
+  i<- 1
+  peso<- c()
+  pago<- c()
+  while (i <= paquetes){
+    peso[i]<- weights_bids[pos_x[i],1]
+    pago[i]<- weights_bids[pos_x[i],2]
+    i<- i+1
+  }
+  out <- data.frame(city = 1:paquetes, peso, pago )
+  return(out)
+}
+  
 
 costo_paquete <- function(route,costo){
   sum_costo<-0
@@ -156,11 +171,11 @@ vecino <- function(vec){
 
 
 
-anneal <- function(weights_bids,N=50, temp=20,   alpha = 0.95){
+anneal <- function(paquetes=5, N=50, temp=20,   alpha = 0.95){
   temp_min = 0.001
   
-  capacidad <- weights_bids
-  pac_costo <- as.matrix(dist(capacidad[,1:2]))
+  capacidad <- generated_paquetes(paquetes)
+  pac_costo <- as.matrix(dist(capacidad[,2:3]))
   ruta <- initial_paquete(N,pac_costo)
   costo <- costo_paquete(ruta,pac_costo)
   while(temp > temp_min){
@@ -181,11 +196,14 @@ anneal <- function(weights_bids,N=50, temp=20,   alpha = 0.95){
     }
     temp <- temp*alpha  
   }
-  plot(capacidad[,1:2])
+  print(sum(capacidad[,3]))
+  plot(capacidad[,2:3])
   x<- ruta 
-  polygon(capacidad[x,1:2],border="red",lwd=3)
+  polygon(capacidad[x,2:3],border="blue",lwd=3)
   return(View(data.frame(c(ruta,costo))))
 }
 
 
+debug(anneal)
+anneal(10)
 
